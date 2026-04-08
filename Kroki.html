@@ -326,18 +326,10 @@ function getDuvarUclari(){
 function ogeRotate(yon){
   if(!secili||secili.tip==='duvar'||secili.tip==='stant')return;
   snap2();
-  const prevRot=secili.rot||0;
-  const newRot=(prevRot+yon*90+360)%360;
-  secili.rot=newRot;
-  // w/h'yi swap et — 90° veya 270°'de bounding box değişir
-  if(newRot===90||newRot===270){
-    // Orijinal boyutları ilk döndürmede sakla
-    if(!secili.ow){secili.ow=secili.w;secili.oh=secili.h;}
-    secili.w=secili.oh;secili.h=secili.ow;
-  } else {
-    // 0° veya 180°'de orijinal boyutlara dön
-    if(secili.ow){secili.w=secili.ow;secili.h=secili.oh;}
-  }
+  // Sol üst köşe (x,y) sabit, sadece w ve h yer değiştirir
+  const tmp=secili.w;secili.w=secili.h;secili.h=tmp;
+  // ow/oh sıfırla (artık gerekmiyor)
+  delete secili.ow;delete secili.oh;delete secili.rot;
   render();save();rProps();
 }
 
@@ -628,12 +620,6 @@ function rOge(o){
   const bd={dj:'rgba(167,139,250,.75)',bar:'rgba(255,107,53,.75)',kapi:'rgba(58,255,163,.75)',wc:'rgba(136,136,136,.5)',sahne:'rgba(255,107,53,.65)'};
 
   ctx.save();
-  // Sol üst köşe pivot ile döndür
-  if(o.rot){
-    ctx.translate(o.x,o.y);
-    ctx.rotate(o.rot*Math.PI/180);
-    ctx.translate(-o.x,-o.y);
-  }
   if(sel){ctx.shadowColor='rgba(200,242,58,.45)';ctx.shadowBlur=14/scale;}
   ctx.fillStyle=bg[o.tip]||'rgba(255,255,255,.06)';
   ctx.strokeStyle=bd[o.tip]||'#444';
