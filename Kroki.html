@@ -352,8 +352,16 @@ function silOge(o){
    RESIZE HANDLE
 ============================================================ */
 function resizeHandleAt(o,x,y){
-  if(!o||o.tip==='duvar'||o.tip==='stant')return null;
-  const d=12/scale;
+  if(!o||o.tip==='duvar')return null;
+  const d=18/scale;
+  if(o.tip==='stant'){
+    const cx=o.x+o.w/2,cy=o.y+o.h/2,r=o.w/2;
+    if(Math.abs(x-(cx+r))<d&&Math.abs(y-cy)<d)return 'e';
+    if(Math.abs(x-(cx-r))<d&&Math.abs(y-cy)<d)return 'w';
+    if(Math.abs(x-cx)<d&&Math.abs(y-(cy-r))<d)return 'n';
+    if(Math.abs(x-cx)<d&&Math.abs(y-(cy+r))<d)return 's';
+    return null;
+  }
   const cs=[
     {id:'se',hx:o.x+o.w,hy:o.y+o.h},
     {id:'sw',hx:o.x,hy:o.y+o.h},
@@ -457,10 +465,17 @@ function mm(e){
   if(resizing){
     const dx=x-resizeStart.x,dy=y-resizeStart.y;
     const o=resizing.oge,h=resizing.handle,ro=resizeOrig;
-    if(h==='se'){o.w=Math.max(40,snp(ro.w+dx));o.h=Math.max(20,snp(ro.h+dy));}
-    else if(h==='sw'){const nw=Math.max(40,snp(ro.w-dx));o.x=snp(ro.x+ro.w-nw);o.w=nw;o.h=Math.max(20,snp(ro.h+dy));}
-    else if(h==='ne'){o.w=Math.max(40,snp(ro.w+dx));const nh=Math.max(20,snp(ro.h-dy));o.y=snp(ro.y+ro.h-nh);o.h=nh;}
-    else if(h==='nw'){const nw=Math.max(40,snp(ro.w-dx));o.x=snp(ro.x+ro.w-nw);o.w=nw;const nh=Math.max(20,snp(ro.h-dy));o.y=snp(ro.y+ro.h-nh);o.h=nh;}
+    if(o.tip==='stant'){
+      const cx=ro.x+ro.w/2,cy=ro.y+ro.h/2;
+      let delta=h==='e'?dx:h==='w'?-dx:h==='s'?dy:-dy;
+      const nr=Math.max(20,snp(ro.w/2+delta));
+      o.w=nr*2;o.h=nr*2;o.x=snp(cx-nr);o.y=snp(cy-nr);
+    } else {
+      if(h==='se'){o.w=Math.max(40,snp(ro.w+dx));o.h=Math.max(20,snp(ro.h+dy));}
+      else if(h==='sw'){const nw=Math.max(40,snp(ro.w-dx));o.x=snp(ro.x+ro.w-nw);o.w=nw;o.h=Math.max(20,snp(ro.h+dy));}
+      else if(h==='ne'){o.w=Math.max(40,snp(ro.w+dx));const nh=Math.max(20,snp(ro.h-dy));o.y=snp(ro.y+ro.h-nh);o.h=nh;}
+      else if(h==='nw'){const nw=Math.max(40,snp(ro.w-dx));o.x=snp(ro.x+ro.w-nw);o.w=nw;const nh=Math.max(20,snp(ro.h-dy));o.y=snp(ro.y+ro.h-nh);o.h=nh;}
+    }
     render();return;
   }
   if(drag){
@@ -537,10 +552,17 @@ function onTM(e){
   if(resizing){
     const dx=x-resizeStart.x,dy=y-resizeStart.y;
     const o=resizing.oge,h=resizing.handle,ro=resizeOrig;
-    if(h==='se'){o.w=Math.max(40,snp(ro.w+dx));o.h=Math.max(20,snp(ro.h+dy));}
-    else if(h==='sw'){const nw=Math.max(40,snp(ro.w-dx));o.x=snp(ro.x+ro.w-nw);o.w=nw;o.h=Math.max(20,snp(ro.h+dy));}
-    else if(h==='ne'){o.w=Math.max(40,snp(ro.w+dx));const nh=Math.max(20,snp(ro.h-dy));o.y=snp(ro.y+ro.h-nh);o.h=nh;}
-    else if(h==='nw'){const nw=Math.max(40,snp(ro.w-dx));o.x=snp(ro.x+ro.w-nw);o.w=nw;const nh=Math.max(20,snp(ro.h-dy));o.y=snp(ro.y+ro.h-nh);o.h=nh;}
+    if(o.tip==='stant'){
+      const cx=ro.x+ro.w/2,cy=ro.y+ro.h/2;
+      let delta=h==='e'?dx:h==='w'?-dx:h==='s'?dy:-dy;
+      const nr=Math.max(20,snp(ro.w/2+delta));
+      o.w=nr*2;o.h=nr*2;o.x=snp(cx-nr);o.y=snp(cy-nr);
+    } else {
+      if(h==='se'){o.w=Math.max(40,snp(ro.w+dx));o.h=Math.max(20,snp(ro.h+dy));}
+      else if(h==='sw'){const nw=Math.max(40,snp(ro.w-dx));o.x=snp(ro.x+ro.w-nw);o.w=nw;o.h=Math.max(20,snp(ro.h+dy));}
+      else if(h==='ne'){o.w=Math.max(40,snp(ro.w+dx));const nh=Math.max(20,snp(ro.h-dy));o.y=snp(ro.y+ro.h-nh);o.h=nh;}
+      else if(h==='nw'){const nw=Math.max(40,snp(ro.w-dx));o.x=snp(ro.x+ro.w-nw);o.w=nw;const nh=Math.max(20,snp(ro.h-dy));o.y=snp(ro.y+ro.h-nh);o.h=nh;}
+    }
     render();return;
   }
   if(drag){drag.x=snp(x-doff.x);drag.y=snp(y-doff.y);if(drag.tip==='dj')djP=drag;render();return;}
@@ -709,11 +731,13 @@ function rStant(o){
     ctx.textBaseline='alphabetic';
   }
 
-  // Seçim tutamaçları
+  // Seçim tutamaçları — daire kenarında, daha büyük
   if(sel){
     ctx.fillStyle=renk;
     [[cx-r,cy],[cx+r,cy],[cx,cy-r],[cx,cy+r]].forEach(([hx,hy])=>{
-      ctx.beginPath();ctx.arc(hx,hy,4/scale,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(hx,hy,6/scale,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(hx,hy,6/scale,0,Math.PI*2);
+      ctx.strokeStyle='#fff';ctx.lineWidth=1/scale;ctx.stroke();
     });
   }
 }
