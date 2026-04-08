@@ -243,11 +243,12 @@ function ekleOge(tip){
 /* ---- SNAP ---- */
 function snp(v){return Math.round(v/40)*40;}
 function snpLine(v,pts){
-  // Önce grid snap
+  // Grid snap — her zaman 40px ızgaraya otur
   const g=Math.round(v/40)*40;
   let best=g,bd=Math.abs(v-g);
-  // Sonra çizgi uçlarına snap (daha yakınsa)
-  for(const p of pts){const d=Math.abs(v-p);if(d<20/scale&&d<bd){best=p;bd=d;}}
+  // Çizgi uçlarına snap — 15 ekran pikseli mesafe (scale bağımsız)
+  const thr=15/scale;
+  for(const p of pts){const d=Math.abs(v-p);if(d<thr&&d<bd){best=p;bd=d;}}
   return best;
 }
 function getDuvarUclari(){
@@ -256,12 +257,17 @@ function getDuvarUclari(){
   return pts;
 }
 
-/* ---- ROTATE ---- */
+/* ---- ROTATE — sol üst köşe sabit ---- */
 function ogeRotate(yon){
   if(!secili||secili.tip==='duvar')return;
   snap2();
   secili.rot=((secili.rot||0)+yon*90+360)%360;
-  if(secili.tip!=='stant'){const tmp=secili.w;secili.w=secili.h;secili.h=tmp;}
+  if(secili.tip!=='stant'){
+    // Sol üst köşe (o.x, o.y) sabit kalır
+    const oldW=secili.w,oldH=secili.h;
+    secili.w=oldH;secili.h=oldW;
+    // x,y değişmez — sol üst köşe aynı kalır
+  }
   render();save();rProps();
 }
 
