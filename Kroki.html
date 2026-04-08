@@ -243,8 +243,11 @@ function ekleOge(tip){
 /* ---- SNAP ---- */
 function snp(v){return Math.round(v/40)*40;}
 function snpLine(v,pts){
-  let best=snp(v),bd=Math.abs(v-best);
-  for(const p of pts){const d=Math.abs(v-p);if(d<16/scale&&d<bd){best=p;bd=d;}}
+  // Önce grid snap
+  const g=Math.round(v/40)*40;
+  let best=g,bd=Math.abs(v-g);
+  // Sonra çizgi uçlarına snap (daha yakınsa)
+  for(const p of pts){const d=Math.abs(v-p);if(d<20/scale&&d<bd){best=p;bd=d;}}
   return best;
 }
 function getDuvarUclari(){
@@ -403,15 +406,18 @@ function djY(o){return o.tip==='stant'&&djP&&djP.id!==o.id&&Math.sqrt((o.x+o.w/2
 function rOge(o){
   if(o.tip==='stant'){rStant(o);return;}
   const sel=secili&&secili.id===o.id;
-  ctx.save();
-  if(o.rot){ctx.translate(o.x+o.w/2,o.y+o.h/2);ctx.rotate(o.rot*Math.PI/180);ctx.translate(-(o.x+o.w/2),-(o.y+o.h/2));}
   const bg={dj:'rgba(167,139,250,.2)',bar:'rgba(255,107,53,.18)',kapi:'rgba(58,255,163,.18)',wc:'rgba(136,136,136,.15)',sahne:'rgba(255,107,53,.14)'};
   const bd={dj:'rgba(167,139,250,.75)',bar:'rgba(255,107,53,.75)',kapi:'rgba(58,255,163,.75)',wc:'rgba(136,136,136,.5)',sahne:'rgba(255,107,53,.65)'};
+  const cx=o.x+o.w/2,cy=o.y+o.h/2;
+  ctx.save();
+  ctx.translate(cx,cy);
+  if(o.rot)ctx.rotate(o.rot*Math.PI/180);
+  ctx.translate(-cx,-cy);
   if(sel){ctx.shadowColor='rgba(200,242,58,.45)';ctx.shadowBlur=14/scale;}
   ctx.fillStyle=bg[o.tip]||'rgba(255,255,255,.06)';ctx.strokeStyle=bd[o.tip]||'#444';ctx.lineWidth=(sel?2.5:1)/scale;
   rr(o.x,o.y,o.w,o.h,7/scale);ctx.fill();ctx.stroke();ctx.shadowBlur=0;
   const fs=11/scale;ctx.fillStyle='#f0f0f0';ctx.font=`bold ${fs}px JetBrains Mono,monospace`;ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText(o.label,o.x+o.w/2,o.y+o.h/2);
+  ctx.fillText(o.label,cx,cy);
   if(sel){
     ctx.fillStyle='#c8f23a';
     [[o.x,o.y],[o.x+o.w,o.y],[o.x,o.y+o.h],[o.x+o.w,o.y+o.h]].forEach(([hx,hy])=>{ctx.beginPath();ctx.arc(hx,hy,5/scale,0,Math.PI*2);ctx.fill();});
