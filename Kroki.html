@@ -326,10 +326,13 @@ function getDuvarUclari(){
 function ogeRotate(yon){
   if(!secili||secili.tip==='duvar'||secili.tip==='stant')return;
   snap2();
-  // Sol üst köşe (x,y) sabit, sadece w ve h yer değiştirir
-  const tmp=secili.w;secili.w=secili.h;secili.h=tmp;
-  // ow/oh sıfırla (artık gerekmiyor)
-  delete secili.ow;delete secili.oh;delete secili.rot;
+  // Sol üst köşe (x,y) sabit kalır, sadece w ve h yer değiştirir
+  const ox=secili.x,oy=secili.y;
+  const tmp=secili.w;
+  secili.w=secili.h;
+  secili.h=tmp;
+  secili.x=ox;
+  secili.y=oy;
   render();save();rProps();
 }
 
