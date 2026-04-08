@@ -239,10 +239,14 @@ body {
 #flash-overlay.guest-flash { background: #0d1f3c; }
 #flash-overlay.bilet-flash { background: #0d250d; }
 
-.flash-icon {
-  font-size: 72px;
-  margin-bottom: 24px;
-  animation: bounce-in 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
+.flash-logo {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  opacity: 0.5;
+  margin-bottom: 32px;
+  animation: fade-up 0.3s ease both;
 }
 .flash-name {
   font-size: clamp(28px, 8vw, 52px);
@@ -275,12 +279,84 @@ body {
 }
 .flash-dot.active { opacity: 1; }
 
-.guest-flash .flash-name { color: var(--guest); }
+.guest-flash .flash-logo  { color: var(--guest); }
+.guest-flash .flash-name  { color: var(--guest); }
 .guest-flash .flash-label { color: var(--guest); }
-.guest-flash .flash-dot { color: var(--guest); }
-.bilet-flash .flash-name { color: var(--bilet); }
+.guest-flash .flash-dot   { color: var(--guest); }
+.bilet-flash .flash-logo  { color: var(--bilet); }
+.bilet-flash .flash-name  { color: var(--bilet); }
 .bilet-flash .flash-label { color: var(--bilet); }
-.bilet-flash .flash-dot { color: var(--bilet); }
+.bilet-flash .flash-dot   { color: var(--bilet); }
+
+/* ── DONE SCREEN (MOD 1) ─────────────────────────────────── */
+#done-screen {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 0;
+  background: var(--bg);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 110;
+  padding: 40px;
+  text-align: center;
+}
+#done-screen.show { opacity: 1; pointer-events: all; }
+.done-logo {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.4em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 40px;
+}
+.done-name {
+  font-size: clamp(32px, 9vw, 64px);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  margin-bottom: 16px;
+}
+.done-name.guest-color { color: var(--guest); }
+.done-name.bilet-color { color: var(--bilet); }
+.done-msg {
+  font-family: var(--mono);
+  font-size: 14px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 56px;
+}
+.done-scan-hint {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+  max-width: 260px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+}
+.done-staff-btn {
+  position: absolute;
+  bottom: 24px; right: 24px;
+  background: transparent;
+  border: none;
+  color: var(--border);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 12px;
+  letter-spacing: 4px;
+}
+.done-scan-hint span {
+  display: block;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
 
 /* ── CONFIRMATION OVERLAY (MOD 1) ───────────────────────── */
 #confirm-overlay {
@@ -789,7 +865,10 @@ body {
 /* ── PRINT STYLES ────────────────────────────────────────── */
 @media print {
   body { overflow: visible !important; background: #fff !important; }
-  #mod-giris, #mod-izle, #loading-screen, #qr-section > *:not(#qr-print-area) { display: none !important; }
+  #mod-giris, #mod-izle, #loading-screen,
+  #flash-overlay, #done-screen, #confirm-overlay,
+  #already-toast, #welcome-overlay,
+  #qr-section > *:not(#qr-print-area) { display: none !important; }
   #qr-section { padding: 0; position: static; overflow: visible; }
   #qr-print-area {
     display: flex !important;
@@ -860,7 +939,7 @@ body {
 <!-- Flash overlay MOD 1 -->
 
 <div id="flash-overlay">
-  <div class="flash-icon" id="flash-icon"></div>
+  <div class="flash-logo">B2B House</div>
   <div class="flash-name" id="flash-name"></div>
   <div class="flash-label" id="flash-label"></div>
   <div class="flash-timer" id="flash-timer">
@@ -868,6 +947,19 @@ body {
     <div class="flash-dot" id="fd2"></div>
     <div class="flash-dot" id="fd3"></div>
   </div>
+</div>
+
+<!-- Done screen MOD 1 -->
+
+<div id="done-screen">
+  <div class="done-logo">B2B House</div>
+  <div class="done-name" id="done-name"></div>
+  <div class="done-msg">İyi eğlenceler — içeri girebilirsin</div>
+  <div class="done-scan-hint">
+    <span>Sonraki kişi</span>
+    QR kodu tekrar okut
+  </div>
+  <button class="done-staff-btn" onclick="staffReset()">· · ·</button>
 </div>
 
 <!-- Already-here toast -->
@@ -1049,6 +1141,18 @@ let flashTimeout = null;
 let flashDotInterval = null;
 
 async function initGiris() {
+  // Daha önce bu telefonda bu etkinlik için check-in yapıldıysa kilitle
+  const lockKey = `b2b_done_${etkinlikId}`;
+  if (localStorage.getItem(lockKey)) {
+    const lockedName = localStorage.getItem(lockKey + '_isim') || '';
+    const lockedGuest = localStorage.getItem(lockKey + '_guest') === '1';
+    loading.classList.add('hidden');
+    const done = $('done-screen');
+    $('done-name').textContent = lockedName;
+    $('done-name').className   = 'done-name ' + (lockedGuest ? 'guest-color' : 'bilet-color');
+    done.classList.add('show');
+    return;
+  }
   // Fetch event info
   const { data: ev, error: evErr } = await sb
     .from('etkinlikler').select('*').eq('id', etkinlikId).single();
@@ -1175,6 +1279,13 @@ async function confirmCheckIn() {
   }
   updateGirisStats();
   renderList();
+
+  // Bu telefonu kilitle
+  const lockKey = `b2b_done_${etkinlikId}`;
+  localStorage.setItem(lockKey, '1');
+  localStorage.setItem(lockKey + '_isim', isim);
+  localStorage.setItem(lockKey + '_guest', guest ? '1' : '0');
+
   showFlash(isim, guest);
 }
 
@@ -1183,12 +1294,19 @@ function cancelConfirm() {
   $('confirm-overlay').classList.remove('show');
 }
 
+function staffReset() {
+  // Tüm b2b_ kilitleri temizle ve sayfayı yenile
+  Object.keys(localStorage)
+    .filter(k => k.startsWith('b2b_done_'))
+    .forEach(k => localStorage.removeItem(k));
+  location.reload();
+}
+
 function showFlash(isim, isGuest) {
   if (flashTimeout) { clearTimeout(flashTimeout); clearInterval(flashDotInterval); }
 
   const overlay = $('flash-overlay');
   overlay.className = isGuest ? 'guest-flash show' : 'bilet-flash show';
-  $('flash-icon').textContent  = isGuest ? '🎟' : '🎫';
   $('flash-name').textContent  = isim;
   $('flash-label').textContent = isGuest ? 'GUEST' : 'BİLET';
 
@@ -1199,17 +1317,17 @@ function showFlash(isim, isGuest) {
   let dotIdx = 0;
   flashDotInterval = setInterval(() => {
     dotIdx++;
-    if (dotIdx < dots.length) {
-      dots[dotIdx].classList.add('active');
-    }
+    if (dotIdx < dots.length) dots[dotIdx].classList.add('active');
   }, 1000);
 
   flashTimeout = setTimeout(() => {
     overlay.classList.remove('show');
     clearInterval(flashDotInterval);
-    $('giris-search').value = '';
-    renderList();
-    setTimeout(() => $('giris-search').focus(), 100);
+    // Show done screen — locks page until QR rescanned
+    const done = $('done-screen');
+    $('done-name').textContent = isim;
+    $('done-name').className   = 'done-name ' + (isGuest ? 'guest-color' : 'bilet-color');
+    done.classList.add('show');
   }, 3000);
 }
 
@@ -1240,21 +1358,25 @@ async function initIzle() {
   loading.classList.add('hidden');
   modIzle.classList.remove('hidden');
 
-  // Realtime subscription
-  sb.channel(`katilimcilar-${etkinlikId}`)
+  // Realtime subscription — filter kaldırıldı, callback'te kontrol edilir
+  sb.channel(`katilimcilar-izle-${etkinlikId}`)
     .on('postgres_changes', {
       event: 'UPDATE',
       schema: 'public',
-      table: 'katilimcilar',
-      filter: `etkinlik_id=eq.${etkinlikId}`
+      table: 'katilimcilar'
     }, payload => {
       const updated = payload.new;
-      if (updated.geldi) {
-        handleNewArrival(updated);
-      }
+      // Sadece bu etkinliğe ait güncellemeleri işle
+      if (String(updated.etkinlik_id) !== String(etkinlikId)) return;
+      if (updated.geldi) handleNewArrival(updated);
       loadIzleStats();
     })
-    .subscribe();
+    .subscribe(status => {
+      console.log('Realtime status:', status);
+    });
+
+  // Fallback polling — Realtime bağlanamasa bile her 8 saniyede senkronize eder
+  setInterval(loadIzleStats, 8000);
 }
 
 async function loadIzleStats() {
@@ -1306,7 +1428,7 @@ function handleNewArrival(p) {
   overlay.classList.add(p.guest ? 'guest-flash' : 'bilet-flash');
 
   $('welcome-name').textContent  = p.isim;
-  $('welcome-badge').textContent = p.guest ? '🎟 GUEST' : '🎫 BİLET';
+  $('welcome-badge').textContent = p.guest ? 'GUEST' : 'BİLET';
 
   // Timer bar animation
   const timerBar = $('welcome-timer-bar');
