@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>B2B House — Giriş</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<style>
+/* ── TOKENS ─────────────────────────────────────────────── */
+:root {
+  --bg:        #0e0e10;
+  --surface:   #16161a;
+  --border:    #2a2a30;
+  --accent:    #c8f23a;
+  --accent2:   #a8d420;
+  --text:      #f0f0f0;
+  --muted:     #6b6b7a;
+  --guest-bg:  #1a2a4a;
+  --guest:     #4a9eff;
+  --bilet-bg:  #1a3a1a;
+  --bilet:     #4aef6a;
+  --danger:    #ef4a4a;
+  --font:      'Space Grotesk', sans-serif;
+  --mono:      'JetBrains Mono', monospace;
+}
+
+/* ── RESET ───────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── UTILITY ─────────────────────────────────────────────── */
+.hidden { display: none !important; }
+.mono { font-family: var(--mono); }
+
+/* ── LOADING SCREEN ──────────────────────────────────────── */
+#loading-screen {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 20px; z-index: 999;
+}
+.loader-logo {
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.3em;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+.loader-bar {
+  width: 200px; height: 2px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.loader-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  width: 0%;
+  transition: width 0.4s ease;
+  animation: loadbar 1.2s ease forwards;
+}
+@keyframes loadbar { to { width: 100%; } }
+
+/* ── ERROR SCREEN ────────────────────────────────────────── */
+#error-screen {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 16px; padding: 40px;
+  text-align: center;
+}
+#error-screen h2 { color: var(--danger); font-size: 20px; }
+#error-screen p { color: var(--muted); font-size: 14px; max-width: 320px; }
+
+/* ════════════════════════════════════════════════════════════
+   MOD 1 — TELEFON / GİRİŞ
+═══════════════════════════════════════════════════════════ */
+#mod-giris {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+/* Header */
+.giris-header {
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.giris-header-top {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 4px;
+}
+.giris-logo {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.25em;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+.giris-event-name {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.giris-stats {
+  display: flex; gap: 16px; margin-top: 8px;
+}
+.giris-stat {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+.giris-stat span { color: var(--accent); font-weight: 600; }
+
+/* Search */
+.giris-search-wrap {
+  padding: 16px 20px;
+  flex-shrink: 0;
+}
+.giris-search {
+  width: 100%;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 20px;
+  font-size: 20px;
+  font-family: var(--font);
+  font-weight: 500;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+  caret-color: var(--accent);
+}
+.giris-search::placeholder { color: var(--muted); }
+.giris-search:focus { border-color: var(--accent); }
+
+/* Participant list */
+.giris-list-wrap {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 20px 20px;
+  -webkit-overflow-scrolling: touch;
+}
+.giris-list-wrap::-webkit-scrollbar { display: none; }
+
+.participant-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  margin-bottom: 8px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+.participant-btn:active { transform: scale(0.97); }
+.participant-btn.already-here {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.participant-btn.guest-type { border-color: rgba(74,158,255,0.3); }
+.participant-btn.bilet-type { border-color: rgba(74,239,106,0.2); }
+
+.p-btn-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.2;
+}
+.p-btn-meta {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
+}
+.p-tag {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  padding: 3px 8px;
+  border-radius: 20px;
+  text-transform: uppercase;
+}
+.p-tag.guest { background: rgba(74,158,255,0.15); color: var(--guest); }
+.p-tag.bilet { background: rgba(74,239,106,0.12); color: var(--bilet); }
+.p-time {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+.p-check-icon {
+  font-size: 18px;
+  margin-right: 10px;
+}
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+/* ── FLASH OVERLAY (MOD 1) ───────────────────────────────── */
+#flash-overlay {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: 100;
+}
+#flash-overlay.show {
+  opacity: 1;
+  pointer-events: all;
+}
+#flash-overlay.guest-flash { background: #0d1f3c; }
+#flash-overlay.bilet-flash { background: #0d250d; }
+
+.flash-icon {
+  font-size: 72px;
+  margin-bottom: 24px;
+  animation: bounce-in 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
+}
+.flash-name {
+  font-size: clamp(28px, 8vw, 52px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  text-align: center;
+  padding: 0 24px;
+  animation: fade-up 0.35s 0.1s ease both;
+}
+.flash-label {
+  margin-top: 16px;
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  animation: fade-up 0.35s 0.2s ease both;
+}
+.flash-timer {
+  position: absolute;
+  bottom: 40px;
+  display: flex; gap: 6px;
+}
+.flash-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.35;
+}
+.flash-dot.active { opacity: 1; }
+
+.guest-flash .flash-name { color: var(--guest); }
+.guest-flash .flash-label { color: var(--guest); }
+.guest-flash .flash-dot { color: var(--guest); }
+.bilet-flash .flash-name { color: var(--bilet); }
+.bilet-flash .flash-label { color: var(--bilet); }
+.bilet-flash .flash-dot { color: var(--bilet); }
+
+/* ── CONFIRMATION OVERLAY (MOD 1) ───────────────────────── */
+#confirm-overlay {
+  position: fixed; inset: 0;
+  background: rgba(14,14,16,0.92);
+  backdrop-filter: blur(8px);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 32px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 90;
+}
+#confirm-overlay.show {
+  opacity: 1;
+  pointer-events: all;
+}
+.confirm-question {
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 20px;
+}
+.confirm-name {
+  font-size: clamp(32px, 9vw, 56px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-align: center;
+  color: var(--text);
+  line-height: 1.1;
+  margin-bottom: 8px;
+}
+.confirm-tag {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 20px;
+  margin-bottom: 40px;
+}
+.confirm-tag.guest { background: rgba(74,158,255,0.15); color: var(--guest); }
+.confirm-tag.bilet { background: rgba(74,239,106,0.12); color: var(--bilet); }
+.confirm-buttons {
+  display: flex; flex-direction: column; gap: 12px;
+  width: 100%; max-width: 320px;
+}
+.confirm-yes {
+  width: 100%;
+  padding: 20px;
+  border-radius: 16px;
+  border: none;
+  font-size: 20px;
+  font-weight: 700;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  letter-spacing: 0.01em;
+}
+.confirm-yes:active { transform: scale(0.97); }
+.confirm-yes.guest-yes { background: var(--guest); color: #000; }
+.confirm-yes.bilet-yes { background: var(--bilet); color: #000; }
+.confirm-no {
+  width: 100%;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  font-size: 16px;
+  font-weight: 500;
+  font-family: var(--font);
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.confirm-no:active { border-color: var(--text); color: var(--text); }
+
+/* ── ALREADY HERE TOAST (MOD 1) ─────────────────────────── */
+#already-toast {
+  position: fixed;
+  bottom: -80px;
+  left: 50%; transform: translateX(-50%);
+  background: var(--danger);
+  color: #fff;
+  padding: 14px 24px;
+  border-radius: 40px;
+  font-weight: 600;
+  font-size: 15px;
+  white-space: nowrap;
+  transition: bottom 0.3s cubic-bezier(0.34,1.3,0.64,1);
+  z-index: 200;
+}
+#already-toast.show { bottom: 40px; }
+
+/* ════════════════════════════════════════════════════════════
+   MOD 2 — BİLGİSAYAR / İZLE
+═══════════════════════════════════════════════════════════ */
+#mod-izle {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+/* Normal state — dashboard */
+.izle-normal {
+  flex: 1;
+  display: flex; flex-direction: column;
+  padding: 48px 56px;
+}
+.izle-top {
+  display: flex; align-items: flex-start; justify-content: space-between;
+}
+.izle-brand {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.izle-logo {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.35em;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+.izle-event-name {
+  font-size: clamp(28px, 3.5vw, 52px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  line-height: 1;
+}
+.izle-live-badge {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(200,242,58,0.08);
+  border: 1px solid rgba(200,242,58,0.2);
+  border-radius: 40px;
+  padding: 8px 16px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent);
+  letter-spacing: 0.2em;
+}
+.live-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse-dot 1.5s ease infinite;
+}
+@keyframes pulse-dot {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
+}
+
+/* Stats grid */
+.izle-stats {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: 1fr 1fr;
+  gap: 16px;
+  margin-top: 40px;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px 36px;
+  display: flex; flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s;
+}
+.stat-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.stat-card.accent-card {
+  border-color: rgba(200,242,58,0.4);
+  background: rgba(200,242,58,0.05);
+}
+.stat-card.guest-card { border-color: rgba(74,158,255,0.3); background: rgba(74,158,255,0.05); }
+.stat-card.bilet-card { border-color: rgba(74,239,106,0.2); background: rgba(74,239,106,0.04); }
+.stat-card.wide { grid-column: span 3; }
+
+.stat-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.stat-value {
+  font-size: clamp(48px, 6vw, 88px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--text);
+}
+.stat-value.accent { color: var(--accent); }
+.stat-value.guest-color { color: var(--guest); }
+.stat-value.bilet-color { color: var(--bilet); }
+
+.progress-wrap {
+  display: flex; align-items: center; gap: 16px;
+}
+.progress-bar-bg {
+  flex: 1; height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.progress-pct {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--accent);
+  font-weight: 600;
+  min-width: 48px;
+  text-align: right;
+}
+
+/* Recent arrivals */
+.recent-list {
+  display: flex; gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.recent-chip {
+  background: var(--border);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  display: flex; align-items: center; gap: 6px;
+  animation: chip-in 0.3s ease both;
+}
+@keyframes chip-in {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+.recent-chip .chip-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+}
+.recent-chip .chip-dot.guest { background: var(--guest); }
+.recent-chip .chip-dot.bilet { background: var(--bilet); }
+
+/* ── WELCOME OVERLAY (MOD 2) ─────────────────────────────── */
+#welcome-overlay {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+  z-index: 50;
+}
+#welcome-overlay.show { opacity: 1; }
+#welcome-overlay.guest-flash { background: #080e1e; }
+#welcome-overlay.bilet-flash { background: #060f06; }
+
+.welcome-label {
+  font-family: var(--mono);
+  font-size: clamp(13px, 1.5vw, 18px);
+  letter-spacing: 0.5em;
+  text-transform: uppercase;
+  margin-bottom: 24px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.5s 0.1s ease;
+}
+.welcome-name {
+  font-size: clamp(60px, 10vw, 140px);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 0.9;
+  text-align: center;
+  padding: 0 60px;
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.5s 0.2s ease;
+}
+.welcome-hosgeldin {
+  margin-top: 32px;
+  font-family: var(--mono);
+  font-size: clamp(16px, 2vw, 24px);
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.5s 0.35s ease;
+}
+.welcome-type-badge {
+  margin-top: 28px;
+  padding: 10px 24px;
+  border-radius: 40px;
+  font-family: var(--mono);
+  font-size: 14px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-weight: 600;
+  opacity: 0;
+  transform: scale(0.9);
+  transition: all 0.4s 0.45s ease;
+}
+#welcome-overlay.show .welcome-label,
+#welcome-overlay.show .welcome-name,
+#welcome-overlay.show .welcome-hosgeldin,
+#welcome-overlay.show .welcome-type-badge {
+  opacity: 1; transform: none;
+}
+.guest-flash .welcome-label { color: var(--guest); }
+.guest-flash .welcome-name { color: var(--guest); }
+.guest-flash .welcome-hosgeldin { color: rgba(74,158,255,0.7); }
+.guest-flash .welcome-type-badge { background: rgba(74,158,255,0.15); color: var(--guest); border: 1px solid rgba(74,158,255,0.3); }
+.bilet-flash .welcome-label { color: var(--bilet); }
+.bilet-flash .welcome-name { color: var(--bilet); }
+.bilet-flash .welcome-hosgeldin { color: rgba(74,239,106,0.6); }
+.bilet-flash .welcome-type-badge { background: rgba(74,239,106,0.1); color: var(--bilet); border: 1px solid rgba(74,239,106,0.25); }
+
+/* Timer bar */
+.welcome-timer-bar {
+  position: absolute;
+  bottom: 0; left: 0;
+  height: 4px;
+  background: currentColor;
+  opacity: 0.5;
+  animation: none;
+}
+.guest-flash .welcome-timer-bar { color: var(--guest); }
+.bilet-flash .welcome-timer-bar { color: var(--bilet); }
+@keyframes timer-shrink { from { width: 100%; } to { width: 0%; } }
+
+/* ════════════════════════════════════════════════════════════
+   QR ÜRETİCİ (bottom section — hidden by default)
+═══════════════════════════════════════════════════════════ */
+#qr-section {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  overflow-y: auto;
+  padding: 40px;
+}
+#qr-section::-webkit-scrollbar { width: 6px; }
+#qr-section::-webkit-scrollbar-track { background: transparent; }
+#qr-section::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.qr-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 40px;
+  flex-wrap: wrap; gap: 16px;
+}
+.qr-header-left h1 {
+  font-size: 28px; font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.qr-header-left p {
+  color: var(--muted); font-size: 14px; margin-top: 4px;
+  font-family: var(--mono);
+}
+.qr-back-btn {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.qr-back-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.qr-select-wrap {
+  margin-bottom: 32px;
+}
+.qr-select-wrap label {
+  display: block;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.qr-select {
+  width: 100%; max-width: 480px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  font-size: 16px;
+  font-family: var(--font);
+  color: var(--text);
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.qr-select:focus { border-color: var(--accent); }
+.qr-select option { background: var(--surface); }
+
+/* A4 Print canvas */
+#qr-print-area {
+  background: #fff;
+  width: 794px;
+  min-height: 500px;
+  margin: 0 auto;
+  padding: 60px;
+  border-radius: 4px;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+}
+#qr-print-area.show { display: flex; }
+
+.print-logo {
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.5em;
+  color: #000;
+  text-transform: uppercase;
+  text-align: center;
+}
+.print-event-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 32px;
+  font-weight: 800;
+  color: #000;
+  text-align: center;
+  letter-spacing: -0.02em;
+}
+.print-event-date {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: #555;
+  text-align: center;
+  letter-spacing: 0.2em;
+}
+#qr-code-box {
+  padding: 20px;
+  background: #fff;
+  border: 3px solid #000;
+  border-radius: 4px;
+  display: inline-block;
+}
+.print-instructions {
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: #666;
+  max-width: 460px;
+  line-height: 1.8;
+  letter-spacing: 0.05em;
+}
+.print-divider {
+  width: 100%;
+  height: 1px;
+  background: #ddd;
+}
+.print-btn-row {
+  display: flex; gap: 12px; justify-content: center;
+  margin-top: 24px; flex-wrap: wrap;
+}
+.print-btn {
+  background: var(--accent);
+  color: #000;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 28px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: opacity 0.15s;
+  letter-spacing: 0.02em;
+}
+.print-btn:hover { opacity: 0.85; }
+.print-btn.secondary {
+  background: var(--surface);
+  color: var(--text);
+  border: 1.5px solid var(--border);
+}
+
+/* ── ANIMATIONS ──────────────────────────────────────────── */
+@keyframes bounce-in {
+  0% { transform: scale(0.5); opacity: 0; }
+  70% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── PRINT STYLES ────────────────────────────────────────── */
+@media print {
+  body { overflow: visible !important; background: #fff !important; }
+  #mod-giris, #mod-izle, #loading-screen, #qr-section > *:not(#qr-print-area) { display: none !important; }
+  #qr-section { padding: 0; position: static; overflow: visible; }
+  #qr-print-area {
+    display: flex !important;
+    width: 210mm;
+    min-height: 297mm;
+    padding: 20mm;
+    margin: 0;
+    box-shadow: none;
+    border-radius: 0;
+    justify-content: center;
+  }
+  .print-btn-row { display: none !important; }
+}
+</style>
+
+</head>
+<body>
+
+<!-- ── LOADING ────────────────────────────────── -->
+
+<div id="loading-screen">
+  <div class="loader-logo">B2B House</div>
+  <div class="loader-bar"><div class="loader-bar-fill"></div></div>
+</div>
+
+<!-- ── ERROR ──────────────────────────────────── -->
+
+<div id="error-screen" class="hidden">
+  <h2>⚠ Hata</h2>
+  <p id="error-msg">Bir şeyler ters gitti.</p>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MOD 1 — GİRİŞ (TELEFON)
+══════════════════════════════════════════════ -->
+
+<div id="mod-giris" class="hidden">
+  <div class="giris-header">
+    <div class="giris-header-top">
+      <span class="giris-logo mono">B2B House</span>
+    </div>
+    <div class="giris-event-name" id="giris-event-name">—</div>
+    <div class="giris-stats">
+      <div class="giris-stat">Geldi: <span id="stat-geldi">0</span></div>
+      <div class="giris-stat">Toplam: <span id="stat-toplam">0</span></div>
+      <div class="giris-stat">Bekliyor: <span id="stat-bekliyor">0</span></div>
+    </div>
+  </div>
+
+  <div class="giris-search-wrap">
+    <input
+      type="text"
+      id="giris-search"
+      class="giris-search"
+      placeholder="İsim ara..."
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="off"
+      spellcheck="false"
+    >
+  </div>
+
+  <div class="giris-list-wrap">
+    <div id="giris-list"></div>
+  </div>
+</div>
+
+<!-- Flash overlay MOD 1 -->
+
+<div id="flash-overlay">
+  <div class="flash-icon" id="flash-icon"></div>
+  <div class="flash-name" id="flash-name"></div>
+  <div class="flash-label" id="flash-label"></div>
+  <div class="flash-timer" id="flash-timer">
+    <div class="flash-dot active" id="fd1"></div>
+    <div class="flash-dot" id="fd2"></div>
+    <div class="flash-dot" id="fd3"></div>
+  </div>
+</div>
+
+<!-- Already-here toast -->
+
+<div id="already-toast">⚠ Bu kişi zaten içeride!</div>
+
+<!-- Confirm overlay MOD 1 -->
+
+<div id="confirm-overlay">
+  <div class="confirm-question">Bu sen misin?</div>
+  <div class="confirm-name" id="confirm-name"></div>
+  <div class="confirm-tag" id="confirm-tag"></div>
+  <div class="confirm-buttons">
+    <button class="confirm-yes" id="confirm-yes-btn" onclick="confirmCheckIn()">Evet, benim ✓</button>
+    <button class="confirm-no" onclick="cancelConfirm()">Hayır, değilim</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MOD 2 — İZLE (BİLGİSAYAR)
+══════════════════════════════════════════════ -->
+
+<div id="mod-izle" class="hidden">
+  <div class="izle-normal" id="izle-normal">
+    <div class="izle-top">
+      <div class="izle-brand">
+        <span class="izle-logo">B2B House — Live</span>
+        <div class="izle-event-name" id="izle-event-name">—</div>
+      </div>
+      <div class="izle-live-badge">
+        <div class="live-dot"></div>
+        CANLI
+      </div>
+    </div>
+
+```
+<div class="izle-stats">
+  <!-- Total -->
+  <div class="stat-card accent-card">
+    <div class="stat-label">Toplam Katılımcı</div>
+    <div class="stat-value accent" id="iz-toplam">0</div>
+  </div>
+  <!-- Geldi -->
+  <div class="stat-card">
+    <div class="stat-label">İçeride</div>
+    <div class="stat-value" id="iz-geldi">0</div>
+  </div>
+  <!-- Gelmedi -->
+  <div class="stat-card">
+    <div class="stat-label">Bekleniyor</div>
+    <div class="stat-value" id="iz-bekliyor">0</div>
+  </div>
+  <!-- Guest -->
+  <div class="stat-card guest-card">
+    <div class="stat-label">Guest Listesi</div>
+    <div class="stat-value guest-color" id="iz-guest">0</div>
+  </div>
+  <!-- Bilet -->
+  <div class="stat-card bilet-card">
+    <div class="stat-label">Bilet</div>
+    <div class="stat-value bilet-color" id="iz-bilet">0</div>
+  </div>
+  <!-- Progress + recent -->
+  <div class="stat-card wide">
+    <div class="stat-label" style="margin-bottom:12px">Doluluk</div>
+    <div class="progress-wrap">
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="iz-progress" style="width:0%"></div>
+      </div>
+      <div class="progress-pct" id="iz-pct">0%</div>
+    </div>
+    <div style="margin-top:20px">
+      <div class="stat-label" style="margin-bottom:10px">Son Gelenler</div>
+      <div class="recent-list" id="iz-recent"></div>
+    </div>
+  </div>
+</div>
+```
+
+  </div>
+</div>
+
+<!-- Welcome overlay MOD 2 -->
+
+<div id="welcome-overlay">
+  <div class="welcome-label">Hoş geldin</div>
+  <div class="welcome-name" id="welcome-name"></div>
+  <div class="welcome-hosgeldin">HOŞ GELDİN 🎶</div>
+  <div class="welcome-type-badge" id="welcome-badge"></div>
+  <div class="welcome-timer-bar" id="welcome-timer-bar"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     QR ÜRETİCİ
+══════════════════════════════════════════════ -->
+
+<div id="qr-section" class="hidden">
+  <div class="qr-header">
+    <div class="qr-header-left">
+      <h1>QR Üretici</h1>
+      <p>Giriş QR kodunu oluştur · A4'e bas</p>
+    </div>
+  </div>
+
+  <div class="qr-select-wrap">
+    <label>Etkinlik Seç</label>
+    <select class="qr-select" id="qr-event-select">
+      <option value="">— Etkinlik seçin —</option>
+    </select>
+  </div>
+
+  <div id="qr-print-area">
+    <div class="print-logo">B2B HOUSE</div>
+    <div class="print-divider"></div>
+    <div class="print-event-name" id="print-event-name">—</div>
+    <div class="print-event-date" id="print-event-date">—</div>
+    <div id="qr-code-box">
+      <div id="qr-code-canvas"></div>
+    </div>
+    <div class="print-instructions" id="print-url"></div>
+    <div class="print-instructions">
+      Bu QR kodu taratarak giriş sayfasına ulaşabilirsiniz.<br>
+      Kapıda telefon ile taratılacaktır.
+    </div>
+    <div class="print-btn-row">
+      <button class="print-btn" onclick="window.print()">🖨 Yazdır</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCRIPT
+══════════════════════════════════════════════ -->
+
+<script>
+/* ── CONFIG ─────────────────────────────────────────────── */
+const SUPABASE_URL = 'https://ttioocqopxnjnivtnpqb.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR0aW9vY3FvcHhuam5pdnRucHFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MDkyNjUsImV4cCI6MjA4OTQ4NTI2NX0.i1EG5i8y00eWy6-Q2w7kTSzAWeGwztLroLMVkx9UYrI';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ── PARSE URL PARAMS ────────────────────────────────────── */
+const params   = new URLSearchParams(location.search);
+const etkinlikId = params.get('etkinlik');
+const mod        = params.get('mod'); // 'giris' | 'izle' | null (→ qr section)
+
+/* ── DOM SHORTCUTS ───────────────────────────────────────── */
+const $  = id => document.getElementById(id);
+const loading  = $('loading-screen');
+const errSc    = $('error-screen');
+const modGiris = $('mod-giris');
+const modIzle  = $('mod-izle');
+const qrSec    = $('qr-section');
+
+/* ── UTILS ───────────────────────────────────────────────── */
+function showError(msg) {
+  loading.classList.add('hidden');
+  errSc.classList.remove('hidden');
+  $('error-msg').textContent = msg;
+}
+
+function fmtTime(isoStr) {
+  if (!isoStr) return '';
+  const d = new Date(isoStr);
+  return d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function fmtDate(dateStr) {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+/* ════════════════════════════════════════════════════════════
+   MOD 1 — GİRİŞ
+═══════════════════════════════════════════════════════════ */
+let participants = [];
+let flashTimeout = null;
+let flashDotInterval = null;
+
+async function initGiris() {
+  // Fetch event info
+  const { data: ev, error: evErr } = await sb
+    .from('etkinlikler').select('*').eq('id', etkinlikId).single();
+
+  if (evErr || !ev) { showError('Etkinlik bulunamadı: ' + (evErr?.message || '')); return; }
+
+  $('giris-event-name').textContent = ev.adi;
+
+  await loadParticipants();
+
+  loading.classList.add('hidden');
+  modGiris.classList.remove('hidden');
+
+  // Search
+  $('giris-search').addEventListener('input', renderList);
+  $('giris-search').focus();
+
+  // Poll every 20s to keep in sync (without realtime in giris mod)
+  setInterval(loadParticipants, 20000);
+}
+
+async function loadParticipants() {
+  const { data, error } = await sb
+    .from('katilimcilar')
+    .select('*')
+    .eq('etkinlik_id', etkinlikId)
+    .order('isim');
+
+  if (error) { console.error(error); return; }
+  participants = data || [];
+  updateGirisStats();
+  renderList();
+}
+
+function updateGirisStats() {
+  const geldi = participants.filter(p => p.geldi).length;
+  $('stat-geldi').textContent    = geldi;
+  $('stat-toplam').textContent   = participants.length;
+  $('stat-bekliyor').textContent = participants.length - geldi;
+}
+
+function renderList() {
+  const q = $('giris-search').value.toLowerCase().trim();
+  const filtered = q
+    ? participants.filter(p => p.isim.toLowerCase().includes(q))
+    : participants;
+
+  const container = $('giris-list');
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="empty-state">Katılımcı bulunamadı</div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(p => {
+    const typeClass = p.guest ? 'guest-type' : 'bilet-type';
+    const alreadyClass = p.geldi ? 'already-here' : '';
+    const checkIcon = p.geldi ? '<span class="p-check-icon">✓</span>' : '';
+    const timeStr = p.geldi && p.geldi_saat
+      ? `<span class="p-time">${fmtTime(p.geldi_saat)}</span>` : '';
+    const tagLabel = p.guest ? 'Guest' : 'Bilet';
+    const tagClass = p.guest ? 'guest' : 'bilet';
+
+    return `
+      <button
+        class="participant-btn ${typeClass} ${alreadyClass}"
+        data-id="${p.id}"
+        data-geldi="${p.geldi ? '1' : '0'}"
+        data-guest="${p.guest ? '1' : '0'}"
+        data-isim="${encodeURIComponent(p.isim)}"
+        onclick="handleCheckIn(this)"
+      >
+        <div style="display:flex;align-items:center">
+          ${checkIcon}
+          <span class="p-btn-name">${p.isim}</span>
+        </div>
+        <div class="p-btn-meta">
+          <span class="p-tag ${tagClass}">${tagLabel}</span>
+          ${timeStr}
+        </div>
+      </button>`;
+  }).join('');
+}
+
+let pendingCheckIn = null; // { id, guest, isim }
+
+function handleCheckIn(btn) {
+  const id    = btn.dataset.id;
+  const geldi = btn.dataset.geldi === '1';
+  const guest = btn.dataset.guest === '1';
+  const isim  = decodeURIComponent(btn.dataset.isim);
+
+  if (geldi) { showAlreadyToast(); return; }
+
+  // Show confirmation overlay
+  pendingCheckIn = { id, guest, isim };
+  $('confirm-name').textContent = isim;
+  const tag = $('confirm-tag');
+  tag.textContent  = guest ? 'GUEST' : 'BİLET';
+  tag.className    = 'confirm-tag ' + (guest ? 'guest' : 'bilet');
+  const yesBtn = $('confirm-yes-btn');
+  yesBtn.className = 'confirm-yes ' + (guest ? 'guest-yes' : 'bilet-yes');
+  $('confirm-overlay').classList.add('show');
+}
+
+async function confirmCheckIn() {
+  if (!pendingCheckIn) return;
+  const { id, guest, isim } = pendingCheckIn;
+  pendingCheckIn = null;
+  $('confirm-overlay').classList.remove('show');
+
+  const now = new Date().toISOString();
+  const { error } = await sb
+    .from('katilimcilar')
+    .update({ geldi: true, geldi_saat: now })
+    .eq('id', id);
+
+  if (error) { showAlreadyToast('Güncelleme hatası!'); return; }
+
+  const idx = participants.findIndex(p => String(p.id) === String(id));
+  if (idx !== -1) {
+    participants[idx].geldi = true;
+    participants[idx].geldi_saat = now;
+  }
+  updateGirisStats();
+  renderList();
+  showFlash(isim, guest);
+}
+
+function cancelConfirm() {
+  pendingCheckIn = null;
+  $('confirm-overlay').classList.remove('show');
+}
+
+function showFlash(isim, isGuest) {
+  if (flashTimeout) { clearTimeout(flashTimeout); clearInterval(flashDotInterval); }
+
+  const overlay = $('flash-overlay');
+  overlay.className = isGuest ? 'guest-flash show' : 'bilet-flash show';
+  $('flash-icon').textContent  = isGuest ? '🎟' : '🎫';
+  $('flash-name').textContent  = isim;
+  $('flash-label').textContent = isGuest ? 'GUEST' : 'BİLET';
+
+  // Dot timer
+  const dots = [$('fd1'), $('fd2'), $('fd3')];
+  dots.forEach(d => d.classList.remove('active'));
+  dots[0].classList.add('active');
+  let dotIdx = 0;
+  flashDotInterval = setInterval(() => {
+    dotIdx++;
+    if (dotIdx < dots.length) {
+      dots[dotIdx].classList.add('active');
+    }
+  }, 1000);
+
+  flashTimeout = setTimeout(() => {
+    overlay.classList.remove('show');
+    clearInterval(flashDotInterval);
+    $('giris-search').value = '';
+    renderList();
+    setTimeout(() => $('giris-search').focus(), 100);
+  }, 3000);
+}
+
+function showAlreadyToast(msg = '⚠ Bu kişi zaten içeride!') {
+  const t = $('already-toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+/* ════════════════════════════════════════════════════════════
+   MOD 2 — İZLE
+═══════════════════════════════════════════════════════════ */
+let izStats = { toplam: 0, geldi: 0, guest: 0, bilet: 0 };
+let recentArrivals = [];
+let welcomeTimeout = null;
+
+async function initIzle() {
+  const { data: ev, error: evErr } = await sb
+    .from('etkinlikler').select('*').eq('id', etkinlikId).single();
+
+  if (evErr || !ev) { showError('Etkinlik bulunamadı: ' + (evErr?.message || '')); return; }
+
+  $('izle-event-name').textContent = ev.adi;
+
+  await loadIzleStats();
+
+  loading.classList.add('hidden');
+  modIzle.classList.remove('hidden');
+
+  // Realtime subscription
+  sb.channel(`katilimcilar-${etkinlikId}`)
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'katilimcilar',
+      filter: `etkinlik_id=eq.${etkinlikId}`
+    }, payload => {
+      const updated = payload.new;
+      if (updated.geldi) {
+        handleNewArrival(updated);
+      }
+      loadIzleStats();
+    })
+    .subscribe();
+}
+
+async function loadIzleStats() {
+  const { data, error } = await sb
+    .from('katilimcilar')
+    .select('*')
+    .eq('etkinlik_id', etkinlikId);
+
+  if (error || !data) return;
+
+  const toplam  = data.length;
+  const geldi   = data.filter(p => p.geldi).length;
+  const guest   = data.filter(p => p.guest).length;
+  const bilet   = data.filter(p => !p.guest).length;
+  const guestIn = data.filter(p => p.guest && p.geldi).length;
+  const biletIn = data.filter(p => !p.guest && p.geldi).length;
+
+  $('iz-toplam').textContent  = toplam;
+  $('iz-geldi').textContent   = geldi;
+  $('iz-bekliyor').textContent = toplam - geldi;
+  $('iz-guest').textContent   = `${guestIn}/${guest}`;
+  $('iz-bilet').textContent   = `${biletIn}/${bilet}`;
+
+  const pct = toplam > 0 ? Math.round((geldi / toplam) * 100) : 0;
+  $('iz-progress').style.width = pct + '%';
+  $('iz-pct').textContent      = pct + '%';
+
+  // Recent arrivals: last 8, sorted by geldi_saat desc
+  const arrived = data
+    .filter(p => p.geldi && p.geldi_saat)
+    .sort((a, b) => new Date(b.geldi_saat) - new Date(a.geldi_saat))
+    .slice(0, 8);
+
+  const recentEl = $('iz-recent');
+  recentEl.innerHTML = arrived.map(p => `
+    <div class="recent-chip">
+      <div class="chip-dot ${p.guest ? 'guest' : 'bilet'}"></div>
+      ${p.isim}
+    </div>
+  `).join('');
+}
+
+function handleNewArrival(p) {
+  if (welcomeTimeout) clearTimeout(welcomeTimeout);
+
+  const overlay = $('welcome-overlay');
+  overlay.className = '';
+  void overlay.offsetWidth; // force reflow
+  overlay.classList.add(p.guest ? 'guest-flash' : 'bilet-flash');
+
+  $('welcome-name').textContent  = p.isim;
+  $('welcome-badge').textContent = p.guest ? '🎟 GUEST' : '🎫 BİLET';
+
+  // Timer bar animation
+  const timerBar = $('welcome-timer-bar');
+  timerBar.style.animation = 'none';
+  void timerBar.offsetWidth;
+  timerBar.style.animation = 'timer-shrink 4s linear forwards';
+
+  requestAnimationFrame(() => overlay.classList.add('show'));
+
+  welcomeTimeout = setTimeout(() => {
+    overlay.classList.remove('show');
+  }, 4000);
+}
+
+/* ════════════════════════════════════════════════════════════
+   QR ÜRETİCİ
+═══════════════════════════════════════════════════════════ */
+async function initQR() {
+  loading.classList.add('hidden');
+  qrSec.classList.remove('hidden');
+
+  // Load events
+  const { data: events, error } = await sb
+    .from('etkinlikler')
+    .select('id, adi, tarih')
+    .eq('bitti', false)
+    .order('tarih', { ascending: false });
+
+  if (!error && events) {
+    const sel = $('qr-event-select');
+    events.forEach(ev => {
+      const opt = document.createElement('option');
+      opt.value = ev.id;
+      opt.textContent = `${ev.adi} — ${fmtDate(ev.tarih)}`;
+      opt.dataset.tarih = ev.tarih;
+      opt.dataset.adi = ev.adi;
+      sel.appendChild(opt);
+    });
+  }
+
+  $('qr-event-select').addEventListener('change', generateQR);
+}
+
+let qrInstance = null;
+
+function generateQR() {
+  const sel  = $('qr-event-select');
+  const opt  = sel.options[sel.selectedIndex];
+  const evId = sel.value;
+
+  if (!evId) {
+    $('qr-print-area').classList.remove('show');
+    return;
+  }
+
+  const baseUrl  = location.href.split('?')[0];
+  const qrUrl    = `${baseUrl}?etkinlik=${evId}&mod=giris`;
+  const evAdi    = opt.dataset.adi;
+  const evTarih  = fmtDate(opt.dataset.tarih);
+
+  $('print-event-name').textContent = evAdi;
+  $('print-event-date').textContent = evTarih;
+  $('print-url').textContent        = qrUrl;
+
+  // Clear old QR
+  const box = $('qr-code-canvas');
+  box.innerHTML = '';
+  if (qrInstance) { try { qrInstance.clear(); } catch(e) {} qrInstance = null; }
+
+  qrInstance = new QRCode(box, {
+    text: qrUrl,
+    width:  256,
+    height: 256,
+    colorDark:  '#000000',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.H
+  });
+
+  $('qr-print-area').classList.add('show');
+}
+
+/* ════════════════════════════════════════════════════════════
+   ROUTER
+═══════════════════════════════════════════════════════════ */
+async function init() {
+  // No mod → QR generator
+  if (!mod) {
+    await initQR();
+    return;
+  }
+
+  if (!etkinlikId) {
+    showError('URL parametresi eksik: ?etkinlik=... gerekli.');
+    return;
+  }
+
+  if (mod === 'giris') {
+    await initGiris();
+  } else if (mod === 'izle') {
+    await initIzle();
+  } else {
+    showError('Geçersiz mod: ' + mod + ' — "giris" veya "izle" kullanın.');
+  }
+}
+
+init();
+</script>
+
+</body>
+</html>
