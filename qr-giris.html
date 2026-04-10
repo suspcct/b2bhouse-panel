@@ -1114,6 +1114,21 @@ const modGiris = $('mod-giris');
 const modIzle  = $('mod-izle');
 const qrSec    = $('qr-section');
 
+/* ── TURKISH NORMALIZE ───────────────────────────────────── */
+function normalizeTR(str) {
+  return str
+    .toLowerCase()
+    .replace(/ğ/g, 'g')
+    .replace(/ü/g, 'u')
+    .replace(/ş/g, 's')
+    .replace(/ı/g, 'i')
+    .replace(/ö/g, 'o')
+    .replace(/ç/g, 'c')
+    .replace(/â/g, 'a')
+    .replace(/î/g, 'i')
+    .replace(/û/g, 'u');
+}
+
 /* ── UTILS ───────────────────────────────────────────────── */
 function showError(msg) {
   loading.classList.add('hidden');
@@ -1195,9 +1210,9 @@ function updateGirisStats() {
 }
 
 function renderList() {
-  const q = $('giris-search').value.toLowerCase().trim();
+  const q = normalizeTR($('giris-search').value.trim());
   const filtered = q
-    ? participants.filter(p => p.isim.toLowerCase().includes(q))
+    ? participants.filter(p => normalizeTR(p.isim).includes(q))
     : participants;
 
   const container = $('giris-list');
